@@ -1,0 +1,72 @@
+name: Dane dla mapy rolnika
+
+on:
+  schedule:
+    - cron: "37 3 * * *"        # codziennie ok. 4:37 czasu polskiego
+  workflow_dispatch:             # przycisk "Run workflow"
+  push:
+    branches: [main]
+    paths: ["skrypty/**", ".github/workflows/**"]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  dane:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: skrypty/requirements.txt
+
+      - name: Instalacja bibliotek
+        run: pip install -r skrypty/requirements.txt
+
+      # Gleba się nie zmienia - liczona raz, potem brana z pamięci podręcznej
+      - name: Gleba - pamięć podręczna
+        id: gleba
+        uses: actions/cache@v4
+        with:
+          path: _cache_gleba
+          key: gleba-soilgrids-${{ hashFiles('skrypty/gleba_mapa.py', 'skrypty/siatka.py') }}
+
+      - name: Gleba (SoilGrids)
+        if: steps.gleba.outputs.cache-hit != 'true'
+        run: python skrypty/gleba_mapa.py --wyjscie _cache_gleba
+
+      - name: Landsat 8/9 - NDVI, NDWI, NDDI, temperatura powierzchni
+        run: python skrypty/landsat_mapa.py --wyjscie _dane --chmury 10 --dni 90
+
+      - name: ERA5-Land - temperatura i wilgotność gleby, opady
+        run: python skrypty/era5_mapa.py --wyjscie _dane
+
+      - name: Połączenie opisów warstw
+        run: |
+          cp _cache_gleba/* _dane/
+          python skrypty/siatka.py --polacz _dane
+          rm _dane/meta_*.json
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: _dane
+
+  publikacja:
+    needs: dane
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

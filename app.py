@@ -23,7 +23,7 @@ import rolnik_warstwy as W
 # ======================================================================================
 # ADRES DANYCH - wpisz tu adres swojej strony GitHub Pages (Settings -> Pages),
 # np. "https://jankowalska.github.io/mapa-rolnik/". Może to być też folder na dysku.
-ADRES_DANYCH = os.environ.get("ROLNIK_DANE", "https://TWOJLOGIN.github.io/NAZWA-REPOZYTORIUM/")
+ADRES_DANYCH = os.environ.get("ROLNIK_DANE", "https://aawierzchon-ops.github.io/mapa-rolnik-python/")
 # ======================================================================================
 
 st.set_page_config(page_title="Mapa dla rolnika", page_icon="🌱", layout="wide")
